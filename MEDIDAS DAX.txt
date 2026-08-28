@@ -1,0 +1,41 @@
+// ========== MEDIDAS DAX PARA PEGAR EN POWER BI ==========
+// Abrir Power BI Desktop -> Vista Modelo -> factVentas -> Nueva medida y pegar.
+// (Ventas Netas ya existe en el modelo; si no, crear la primera medida primero.)
+
+// Base: ventas netas (descuento es porcentaje 0-25)
+Ventas Netas =
+    SUMX(factVentas, factVentas[Unidad_Vendida] * factVentas[Precio] * (1 - factVentas[Descuento] / 100))
+
+// ---------- Comparativa anual ----------
+Ventas Netas Año Actual =
+    VAR AñoActual = MAX(dimTiempo[Año])
+    RETURN CALCULATE([Ventas Netas], dimTiempo[Año] = AñoActual)
+
+Ventas Netas Año Anterior =
+    VAR AñoActual = MAX(dimTiempo[Año])
+    RETURN CALCULATE([Ventas Netas], dimTiempo[Año] = AñoActual - 1)
+
+% Variación Anual =
+    DIVIDE([Ventas Netas Año Actual] - [Ventas Netas Año Anterior], [Ventas Netas Año Anterior])
+
+// ---------- Reemplaza el componente "cliente con mayor venta" ----------
+// La data no tiene clientes; el equivalente retail es la tienda con más venta.
+
+Ranking Tienda Ventas =
+    RANKX(ALL(dimTienda), [Ventas Netas], , DESC, Dense)
+
+Top Tienda Nombre =
+    CALCULATE(MAX(dimTienda[Store ID]), TOPN(1, ALL(dimTienda), [Ventas Netas]))
+
+Ventas Top Tienda =
+    CALCULATE([Ventas Netas], TOPN(1, ALL(dimTienda), [Ventas Netas]))
+
+Ranking Producto Ventas =
+    RANKX(ALL(dimProducto), [Ventas Netas], , DESC, Dense)
+
+Ventas Top Producto =
+    CALCULATE([Ventas Netas], TOPN(1, ALL(dimProducto), [Ventas Netas]))
+
+// ---------- Extra ----------
+Utilidad Estimada =
+    SUMX(factVentas, factVentas[Unidad_Vendida] * (factVentas[Precio] - factVentas[Precio_Competencia]))
